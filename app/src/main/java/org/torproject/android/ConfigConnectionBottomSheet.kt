@@ -204,6 +204,9 @@ class ConfigConnectionBottomSheet() :
             fileCacheDir.mkdir()
         }
 
+        val countryCodeValue: String? = getDeviceCountryCode(requireContext())
+        Log.d("bim", "The country code is $countryCodeValue")
+
         this.iptproxy = IPtProxy.newIPtProxy(fileCacheDir.absolutePath)
         this.iptproxy.init()
         this.iptproxy.start("moat_lite", "")
@@ -227,14 +230,14 @@ class ConfigConnectionBottomSheet() :
             it?.let {
                 circumventionApiBridges = it.settings
                 if (circumventionApiBridges == null) {
-                    //Log.d("abc", "settings is null, we can assume a direct connect is fine ")
+                    Log.d("abc", "settings is null, we can assume a direct connect is fine ")
                     rbDirect.isChecked = true
 
                 } else {
 
-                    // Log.d("abc", "settings is $circumventionApiBridges")
+                    Log.d("abc", "settings is $circumventionApiBridges")
                     circumventionApiBridges?.forEach { b ->
-                        //   Log.d("abc", "BRIDGE $b")
+                        Log.d("abc", "BRIDGE $b")
                     }
 
                     //got bridges, let's set them
@@ -280,6 +283,8 @@ class ConfigConnectionBottomSheet() :
                 circumventionApiIndex = 0
                 rbDirect.isChecked = true
                 btnAskTor.text = getString(R.string.connection_direct)
+
+                Log.d("bim", "smart connect: Direct is chosen")
 
                 return
             }
