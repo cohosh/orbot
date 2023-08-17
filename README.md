@@ -2,13 +2,11 @@
 
 <img width="" src="./app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" alt="Orbot" align="center"/>
 
-# Orbot
+Forked from [version 17.1.0-BETA-3-tor.0.4.7.14](https://github.com/guardianproject/orbot/tree/17.1.0-BETA-3-tor.0.4.7.14).
 
-### Android Onion Routing Robot
+All changes we've made can be viewed as [git diff](https://github.com/censoredplanet/orbot-android-push/compare/17.1.0-BETA-3-tor.0.4.7.14...master).
 
-[![Weblate Status](./docs/badges/translate_weblate.svg)](https://hosted.weblate.org/engage/guardianproject/)
-[![Play Downloads](./docs/badges/downloads_gplay.svg)](https://play.google.com/store/apps/details?id=org.torproject.android)
-[![Bitrise Status](./docs/badges/bitrise_workflow.svg)](https://app.bitrise.io/app/0e76c31b8e7e1801) ([CI docs](./docs/info/CI.md))
+[![Build Status](https://app.bitrise.io/app/0e76c31b8e7e1801/status.svg?token=S2weJXueO3AvrDUrrd85SA&branch=master)](https://app.bitrise.io/app/0e76c31b8e7e1801) (see Orbot's [CI docs](CI.md))
 
 Orbot is a freely licensed open-source application developed for the
 Android platform. It acts as a front-end for the Tor binary application,
