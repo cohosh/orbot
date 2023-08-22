@@ -35,6 +35,8 @@ class ConfigConnectionBottomSheet() :
     //  private lateinit var rbSnowflakeAmp: RadioButton
     private lateinit var rbRequestBridge: RadioButton
     private lateinit var rbCustom: RadioButton
+    // a choice to subscribe to new bridges via push notification
+    private lateinit var rbPushBridge: RadioButton
 
     private lateinit var btnAction: Button
     private lateinit var btnAskTor: Button
@@ -59,22 +61,25 @@ class ConfigConnectionBottomSheet() :
         //    rbSnowflakeAmp = v.findViewById(R.id.rbSnowflakeAmp)
         rbRequestBridge = v.findViewById(R.id.rbRequest)
         rbCustom = v.findViewById(R.id.rbCustom)
+        rbPushBridge = v.findViewById(R.id.rbPush)
 
         val tvDirectSubtitle = v.findViewById<View>(R.id.tvDirectSubtitle)
         val tvSnowflakeSubtitle = v.findViewById<View>(R.id.tvSnowflakeSubtitle)
         //   val tvSnowflakeAmpSubtitle = v.findViewById<View>(R.id.tvSnowflakeAmpSubtitle)
         val tvRequestSubtitle = v.findViewById<View>(R.id.tvRequestSubtitle)
         val tvCustomSubtitle = v.findViewById<View>(R.id.tvCustomSubtitle)
+        val tvPushSubtitle = v.findViewById<View>(R.id.tvPushSubtitle)
 
-        val radios = arrayListOf(rbDirect, rbSnowflake, rbRequestBridge, rbCustom)
+        val radios = arrayListOf(rbDirect, rbSnowflake, rbRequestBridge, rbCustom, rbPushBridge)
         val radioSubtitleMap = mapOf<CompoundButton, View>(
             rbDirect to tvDirectSubtitle,
             rbSnowflake to tvSnowflakeSubtitle,
             rbRequestBridge to tvRequestSubtitle,
             rbCustom to tvCustomSubtitle
+            rbPushBridge to tvPushSubtitle
         )
         val allSubtitles = arrayListOf(
-            tvDirectSubtitle, tvSnowflakeSubtitle, tvRequestSubtitle, tvCustomSubtitle
+            tvDirectSubtitle, tvSnowflakeSubtitle, tvRequestSubtitle, tvCustomSubtitle, tvPushSubtitle
         )
         btnAction = v.findViewById(R.id.btnAction)
         btnAskTor = v.findViewById(R.id.btnAskTor)
@@ -92,6 +97,7 @@ class ConfigConnectionBottomSheet() :
         v.findViewById<View>(R.id.requestContainer)
             .setOnClickListener { rbRequestBridge.isChecked = true }
         v.findViewById<View>(R.id.customContainer).setOnClickListener { rbCustom.isChecked = true }
+        v.findViewById<View>(R.id.pushContainer).setOnClickListener {rbPushBridge.isChecked = true}
         v.findViewById<View>(R.id.tvCancel).setOnClickListener { dismiss() }
 
         rbDirect.setOnCheckedChangeListener { buttonView, isChecked ->
@@ -131,6 +137,15 @@ class ConfigConnectionBottomSheet() :
                 btnAction.text = getString(R.string.connect)
             }
         }
+        rbPushBridge.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (isChecked) {
+                nestedRadioButtonKludgeFunction(buttonView as RadioButton, radios)
+                radioSubtitleMap[buttonView]?.let { onlyShowActiveSubtitle(it, allSubtitles) }
+                btnAction.text = getString(R.string.next)
+            } else {
+                btnAction.text = getString(R.string.connect)
+            }
+        }
 
         selectRadioButtonFromPreference()
 
@@ -162,6 +177,8 @@ class ConfigConnectionBottomSheet() :
                         callbacks?.tryConnecting()
                     }
                 }).show(requireActivity().supportFragmentManager, CustomBridgeBottomSheet.TAG)
+            } else if (rbPushBridge.isChecked) {
+                PushBridgeBottomSheet(callbacks).show(requireActivity().supportFragmentManager, PushBridgeBottomSheet.TAG)
             }
         }
 
