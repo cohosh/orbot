@@ -1,6 +1,7 @@
 package org.torproject.android
 
 import IPtProxy.IPtProxy
+import IPtProxy.IPtProxy_
 import android.content.Context
 import android.os.Bundle
 import android.telephony.TelephonyManager
@@ -37,6 +38,8 @@ class ConfigConnectionBottomSheet() :
 
     private lateinit var btnAction: Button
     private lateinit var btnAskTor: Button
+
+    private lateinit var iptproxy: IPtProxy_
 
     companion object {
         public fun newInstance(callbacks: ConnectionHelperCallbacks): ConfigConnectionBottomSheet {
@@ -201,8 +204,9 @@ class ConfigConnectionBottomSheet() :
             fileCacheDir.mkdir()
         }
 
-        IPtProxy.setStateLocation(fileCacheDir.absolutePath)
-        IPtProxy.startLyrebird("DEBUG", false, false, null)
+        this.iptproxy = IPtProxy.newIPtProxy(fileCacheDir.absolutePath)
+        this.iptproxy.init()
+        this.iptproxy.start("moat_lite", "")
         val pUsername =
             "url=" + OrbotService.getCdnFront("moat-url") + ";front=" + OrbotService.getCdnFront("moat-front")
         val pPassword = "\u0000"
@@ -219,7 +223,7 @@ class ConfigConnectionBottomSheet() :
 
         val countryCodeValue: String = getDeviceCountryCode(requireContext())
 
-        CircumventionApiManager().getSettings(SettingsRequest(countryCodeValue), {
+        CircumventionApiManager(this.iptproxy.getPort("meek_lite").toInt()).getSettings(SettingsRequest(countryCodeValue), {
             it?.let {
                 circumventionApiBridges = it.settings
                 if (circumventionApiBridges == null) {
@@ -237,7 +241,7 @@ class ConfigConnectionBottomSheet() :
                     setPreferenceForSmartConnect()
                 }
 
-                IPtProxy.stopLyrebird()
+                this.iptproxy.stop("moat")
             }
         }, {
             // TODO what happens to the app in this case?!

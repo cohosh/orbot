@@ -1,6 +1,7 @@
 package org.torproject.android
 
 import IPtProxy.IPtProxy
+import IPtProxy.IPtProxy_
 import android.app.Activity
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -64,6 +65,8 @@ class MoatBottomSheet(private val callbacks: ConnectionHelperCallbacks) :
     private lateinit var ivCaptcha: ImageView
     private lateinit var mQueue: RequestQueue
     private lateinit var mBtnAction: Button
+    private var mIPtProxy: IPtProxy_ = IPtProxy.newIPtProxy("")
+
 
     private fun setupMoat() {
         val fileCacheDir = File(requireActivity().cacheDir, "pt")
@@ -71,13 +74,14 @@ class MoatBottomSheet(private val callbacks: ConnectionHelperCallbacks) :
             fileCacheDir.mkdir()
         }
 
-        IPtProxy.setStateLocation(fileCacheDir.absolutePath)
+        this.mIPtProxy.stateDir =  fileCacheDir.absolutePath
+        this.mIPtProxy.init()
 
-        IPtProxy.startLyrebird("DEBUG", false, false, null)
+        this.mIPtProxy.start("meek_lite", "")
 
         val phs = ProxiedHurlStack(
             "127.0.0.1",
-            IPtProxy.meekPort().toInt(),
+            mIPtProxy.getPort("meek_lite").toInt(),
             "url=" + OrbotService.getCdnFront("moat-url") + ";front=" + OrbotService.getCdnFront("moat-front"),
             "\u0000"
         )

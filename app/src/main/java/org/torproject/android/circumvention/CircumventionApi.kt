@@ -1,6 +1,7 @@
 package org.torproject.android.circumvention
 
 import IPtProxy.IPtProxy
+import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import org.torproject.android.service.OrbotService
 import org.torproject.android.ui.onboarding.ProxiedHurlStack
@@ -38,7 +39,7 @@ interface CircumventionEndpoints {
 object ServiceBuilder {
 
 
-    var proxy: Proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", IPtProxy.meekPort().toInt()))
+    lateinit var proxy: Proxy
 
 
     private val client = OkHttpClient.Builder().proxy(proxy).build()
@@ -50,12 +51,20 @@ object ServiceBuilder {
         .build()
 
     fun<T> buildService(service: Class<T>): T = retrofit.create(service)
+
+    fun setPort(port: Int) {
+        proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", port))
+    }
 }
 
-class  CircumventionApiManager {
+class  CircumventionApiManager (port: Int) {
     companion object {
         const val BRIDGE_TYPE_OBFS4 = "obfs4"
         const val BRIDGE_TYPE_SNOWFLAKE = "snowflake"
+    }
+
+    init {
+        ServiceBuilder.setPort(port)
     }
     private val retrofit = ServiceBuilder.buildService(CircumventionEndpoints::class.java)
 

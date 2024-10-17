@@ -70,6 +70,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import IPtProxy.IPtProxy;
+import IPtProxy.IPtProxy_;
+import IPtProxy.SnowflakeProxy;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -115,6 +117,9 @@ public class OrbotService extends VpnService implements OrbotConstants {
 
     private boolean mHasPower = false;
     private boolean mHasWifi = false;
+
+    private IPtProxy_ iptproxy;
+    private SnowflakeProxy sfproxy;
 
     /**
      * @param bridgeList bridges that were manually entered into Orbot settings
@@ -278,9 +283,9 @@ public class OrbotService extends VpnService implements OrbotConstants {
         // todo this needs to handle a lot of different cases that haven't been defined yet
         // todo particularly this is true for the smart connection case...
         if (connectionPathway.startsWith(Prefs.PATHWAY_SNOWFLAKE) || Prefs.getPrefSmartTrySnowflake()) {
-            IPtProxy.stopSnowflake();
+            this.iptproxy.stop("snowflake");
         } else if (connectionPathway.equals(Prefs.PATHWAY_CUSTOM) || Prefs.getPrefSmartTryObfs4() != null) {
-            IPtProxy.stopLyrebird();
+            this.iptproxy.stop("snowflake");
         }
 
         stopTor();
@@ -368,7 +373,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
         // @param maxPeers Capacity for number of multiplexed WebRTC peers. DEFAULTs to 1 if less than that.
         // @return Port number where Snowflake will listen on, if no error happens during start up.
          */
-        IPtProxy.startSnowflake(stunServer, target, front, null, null, null, null,true, false, false, 1);
+        this.iptproxy.start("snowflake", "");
 
     }
 
@@ -377,13 +382,21 @@ public class OrbotService extends VpnService implements OrbotConstants {
         var target = getCdnFront("snowflake-target-direct");
         var front = getCdnFront("snowflake-amp-front");
         var ampCache = getCdnFront("snowflake-amp-cache");
-        IPtProxy.startSnowflake(stunServers, target, front, ampCache, null, null, null, true, false, false, 1);
+        this.iptproxy.setSnowflakeIceServers(stunServers);
+        this.iptproxy.setSnowflakeBrokerUrl(target);
+        this.iptproxy.setSnowflakeFrontDomains(front);
+        this.iptproxy.setSnowflakeAmpCacheUrl(ampCache);
+        this.iptproxy.start("snowflake", "");
+    }
+
+    private void startLyrebird() {
+        this.iptproxy.start("obfs4", "");
     }
 
     private final SecureRandom mSecureRandGen = new SecureRandom(); //used to randomly select STUN servers for snowflake
 
     public synchronized void enableSnowflakeProxy() { // This is to host a snowflake entrance node / bridge
-        if (!IPtProxy.isSnowflakeProxyRunning()) {
+        if (this.iptproxy.getPort("snowflake") == 0) {
 
             if (Prefs.limitSnowflakeProxyingWifi() && (!mHasWifi))
                 return;
@@ -391,22 +404,16 @@ public class OrbotService extends VpnService implements OrbotConstants {
             if (Prefs.limitSnowflakeProxyingCharging() && (!mHasPower))
                 return;
 
-            var capacity = 1;
-            var keepLocalAddresses = false;
-            var unsafeLogging = false;
-            var stunServers = getCdnFront("snowflake-stun").split(",");
-
-            int randomIndex = mSecureRandGen.nextInt(stunServers.length);
-            var stunUrl = stunServers[randomIndex];
-            var relayUrl = getCdnFront("snowflake-relay-url");
-            var natProbeUrl = getCdnFront("snowflake-nat-probe");
-            var brokerUrl = getCdnFront("snowflake-target-direct");
-            IPtProxy.startSnowflakeProxy(capacity, brokerUrl, relayUrl, stunUrl, natProbeUrl, null, keepLocalAddresses, unsafeLogging, () -> {
-                Prefs.addSnowflakeServed();
-                if (!Prefs.showSnowflakeProxyMessage()) return;
-                var message = String.format(getString(R.string.snowflake_proxy_client_connected_msg), ONION_EMOJI, ONION_EMOJI);
-                new Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show());
-            });
+            if (this.sfproxy == null) {
+                this.sfproxy.setCapacity(1);
+                var stunServers = getCdnFront("snowflake-stun").split(",");
+                int randomIndex = mSecureRandGen.nextInt(stunServers.length);
+                this.sfproxy.setStunServer(stunServers[randomIndex]);
+                this.sfproxy.setRelayUrl("snowflake-relay-url");
+                this.sfproxy.setNatProbeUrl("snowflake-nat-probe");
+                this.sfproxy.setBrokerUrl("snowflake-target-direct");
+            }
+            this.sfproxy.start();
             logNotice(getString(R.string.log_notice_snowflake_proxy_enabled));
 
             if (Prefs.showSnowflakeProxyMessage()) {
@@ -475,8 +482,8 @@ public class OrbotService extends VpnService implements OrbotConstants {
     }
 
     public synchronized void disableSnowflakeProxy() {
-        if (IPtProxy.isSnowflakeProxyRunning()) {
-            IPtProxy.stopSnowflakeProxy();
+
+            this.iptproxy.stop("snowflake");
             logNotice(getString(R.string.log_notice_snowflake_proxy_disabled));
 
             if (Prefs.showSnowflakeProxyMessage()) {
@@ -484,7 +491,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
                 new Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show());
             }
 
-        }
+
     }
 
     // if someone stops during startup, we may have to wait for the conn port to be setup, so we can properly shutdown tor
@@ -622,8 +629,8 @@ public class OrbotService extends VpnService implements OrbotConstants {
             fileCacheDir.mkdir();
 
         try {
-            IPtProxy.setStateLocation(fileCacheDir.getAbsolutePath());
-            debug("IPtProxy state: " + IPtProxy.getStateLocation());
+            this.iptproxy = IPtProxy.newIPtProxy(fileCacheDir.getAbsolutePath());
+            this.iptproxy.init();
         } catch (Error e) {
             debug("IPtProxy state: not installed; " + e.getLocalizedMessage());
 
@@ -1208,7 +1215,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
 
     private StringBuffer processSettingsImplSnowflake(StringBuffer extraLines) {
         Log.d(TAG, "in snowflake torrc config");
-        extraLines.append("ClientTransportPlugin snowflake socks5 127.0.0.1:" + IPtProxy.snowflakePort()).append('\n');
+        extraLines.append("ClientTransportPlugin snowflake socks5 127.0.0.1:" + this.iptproxy.getPort("snowflake")).append('\n');
         for (String bridge : mSnowflakeBridges) {
             extraLines.append("Bridge ").append(bridge).append("\n");
         }
@@ -1217,7 +1224,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
 
     private StringBuffer processSettingsImplObfs4(StringBuffer extraLines) {
         Log.d(TAG, "in obfs4 torrc config");
-        extraLines.append("ClientTransportPlugin obfs4 socks5 127.0.0.1:" + IPtProxy.obfs4Port()).append('\n');
+        extraLines.append("ClientTransportPlugin obfs4 socks5 127.0.0.1:" + this.iptproxy.getPort("obfs4")).append('\n');
         var bridgeList = "";
         if (Prefs.getConnectionPathway().equals(Prefs.PATHWAY_CUSTOM)) {
             bridgeList = Prefs.getBridgesList();
@@ -1468,7 +1475,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
                     } else if (connectionPathway.equals(Prefs.PATHWAY_SNOWFLAKE_AMP)) {
                         startSnowflakeClientAmpRendezvous();
                     } else if (connectionPathway.equals(Prefs.PATHWAY_CUSTOM) || Prefs.getPrefSmartTryObfs4() != null) {
-                        IPtProxy.startLyrebird("DEBUG", false, false, null);
+                        startLyrebird();
                     }
                     startTor();
                     replyWithStatus(mIntent);
