@@ -72,7 +72,7 @@ class ConfigConnectionBottomSheet() :
             rbDirect to tvDirectSubtitle,
             rbSnowflake to tvSnowflakeSubtitle,
             rbRequestBridge to tvRequestSubtitle,
-            rbCustom to tvCustomSubtitle
+            rbCustom to tvCustomSubtitle,
             rbPushBridge to tvPushSubtitle
         )
         val allSubtitles = arrayListOf(
@@ -175,7 +175,11 @@ class ConfigConnectionBottomSheet() :
                     }
                 }).show(requireActivity().supportFragmentManager, CustomBridgeBottomSheet.TAG)
             } else if (rbPushBridge.isChecked) {
-                PushBridgeBottomSheet(callbacks).show(requireActivity().supportFragmentManager, PushBridgeBottomSheet.TAG)
+                PushBridgeBottomSheet(object : ConnectionHelperCallbacks {
+                    override fun tryConnecting() {
+                        callbacks?.tryConnecting()
+                    }
+                }).show(requireActivity().supportFragmentManager, PushBridgeBottomSheet.TAG)
             }
         }
 
