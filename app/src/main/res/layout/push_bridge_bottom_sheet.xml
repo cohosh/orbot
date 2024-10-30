@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:background="@color/new_background"
     android:paddingStart="10dp"
@@ -24,50 +25,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvPushBridgeHeader"
         android:id="@+id/tvPushBridgeSubHeader"/>
-
-    <org.torproject.android.core.ui.NoPersonalizedLearningEditText
-        android:textColor="@android:color/white"
-        android:textColorHint="@android:color/white"
-        android:layout_marginTop="20dp"
-        android:id="@+id/etBridges"
-        android:minLines="6"
-        android:maxLines="10"
-        android:scrollbars="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/tvPushBridgeSubHeader"
-        app:layout_constraintStart_toStartOf="parent"/>
-
-<!--    <TextView-->
-<!--        android:id="@+id/textTitle"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="Enable Notifications"-->
-<!--        android:textSize="18sp"-->
-<!--        app:layout_constraintTop_toBottomOf="@id/etBridges"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent" />-->
-
-<!--    <TextView-->
-<!--        android:id="@+id/textDescription"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="Allow notifications to stay updated"-->
-<!--        android:textSize="14sp"-->
-<!--        app:layout_constraintTop_toBottomOf="@+id/textTitle"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent" />-->
-
-    <Button
-        android:id="@+id/btnRequestPermission"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enable Notifications"
-        android:enabled="true"
-        android:textColor="@color/orbot_btn_disable_grey"
-        app:layout_constraintTop_toBottomOf="@+id/etBridges"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/mainGuideline"

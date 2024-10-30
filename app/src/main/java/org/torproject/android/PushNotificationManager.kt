@@ -31,17 +31,12 @@ class PushNotificationManager(private val country: String, private val onReceive
         private const val bridgeStatement = "obfs4"
     }
 
-    private lateinit var btnRequestPermission: Button
-
     // Declare the launcher at the top of your Activity/Fragment:
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { isGranted: Boolean ->
-        val btnRequestPermission = requireView().findViewById<Button>(R.id.btnRequestPermission)
         if (isGranted) {
             // FCM SDK (and your app) can post notifications.
-            btnRequestPermission.isEnabled = false
-            btnRequestPermission.text = "Notifications Enabled ✔"
 
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                 if (!task.isSuccessful) {
@@ -56,9 +51,8 @@ class PushNotificationManager(private val country: String, private val onReceive
                 Log.d(TAG, token)
             })
         } else {
-            // TODO: Inform user that that your app will not show notifications.
-            btnRequestPermission.isEnabled = true
-            btnRequestPermission.text = "Enable Notifications"
+            // TODO: Inform user that that your app will not show notifications, maybe with same callback used elsewhere
+            Log.d(TAG, "permission for push notifications was not granted")
         }
     }
 
@@ -70,8 +64,6 @@ class PushNotificationManager(private val country: String, private val onReceive
                 PackageManager.PERMISSION_GRANTED
             ) {
                 // FCM SDK (and your app) can post notifications.
-                btnRequestPermission.isEnabled = false
-                btnRequestPermission.text = "Notifications Enabled ✔"
 
                 FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                     if (!task.isSuccessful) {
@@ -84,21 +76,16 @@ class PushNotificationManager(private val country: String, private val onReceive
 
                     // Log and toast
                     Log.d(TAG, token)
-                    etBridges.setText(token)
                 })
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
                 // TODO: display an educational UI explaining to the user the features that will be enabled
                 //       by them granting the POST_NOTIFICATION permission. This UI should provide the user
                 //       "OK" and "No thanks" buttons. If the user selects "OK," directly request the permission.
                 //       If the user selects "No thanks," allow the user to continue without notifications.
-                btnRequestPermission.isEnabled = true
-                btnRequestPermission.text = "Enable Notifications"
 
                 // For now, directly ask for the permission
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
-                btnRequestPermission.isEnabled = true
-                btnRequestPermission.text = "Enable Notifications"
 
                 // Directly ask for the permission
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -127,7 +114,7 @@ class PushNotificationManager(private val country: String, private val onReceive
             // TODO: check if has already been initialized?
             MyFirebaseMessagingService.sendRegistrationToServer(country, token, {
                 mainHandler.post { // Update UI elements here
-                    etBridges.setText("Registered with server successfully. Awaiting bridges to be posted via push notification")
+                    Log.d(TAG, "Registered with server successfully. Awaiting bridges to be posted via push notification")
 
                     // use channel to wait for push messages. before then, user cannot proceed
                     MyFirebaseMessagingService.waitingChannel = Channel()
@@ -163,7 +150,6 @@ class PushNotificationManager(private val country: String, private val onReceive
     }
 
     private lateinit var btnAction: Button
-    private lateinit var etBridges: EditText
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -175,35 +161,20 @@ class PushNotificationManager(private val country: String, private val onReceive
         val v =  inflater.inflate(R.layout.push_bridge_bottom_sheet, container, false)
         v.findViewById<View>(R.id.tvCancel).setOnClickListener { dismiss() }
 
-        btnRequestPermission = v.findViewById(R.id.btnRequestPermission)
-        btnRequestPermission.setOnClickListener {
-            askNotificationPermission()
-        }
-
         btnAction = v.findViewById(R.id.btnAction)
         btnAction.setOnClickListener {
             Log.d(TAG, "enabled push notifications")
+            askNotificationPermission()
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
                 // FCM SDK (and your app) can post notifications.
-                btnRequestPermission.isEnabled = false
-                btnRequestPermission.text = "Notifications Enabled ✔"
                 this.register()
             }
             closeAllSheets()
         }
-
-        // TODO: maybe use the textfield for out-of-band initialization?
-        etBridges = v.findViewById(R.id.etBridges)
-        configureMultilineEditTextScrollEvent(etBridges)
         Log.d(TAG, "initialized")
         return v
-    }
-
-    private fun updateUi() {
-        btnAction.isEnabled =
-            !(etBridges.text.isEmpty() || !etBridges.text.contains(bridgeStatement))
     }
 
 }
