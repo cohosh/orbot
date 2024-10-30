@@ -38,13 +38,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         // If you want to send messages to this application instance or
         // manage this apps subscriptions on the server side, send the
         // FCM registration token to your app server.
-        sendRegistrationToServer(token)
+        sendRegistrationToServer("", token)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // ...
-
-        // TODO(developer): Handle FCM messages here.
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
         Log.d(TAG, "From: ${remoteMessage.from}")
 
@@ -56,43 +53,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             val gson = Gson()
             val settingsResponse = gson.fromJson(remoteMessage.data.getOrDefault("payload", "{}"), SettingsResponse::class.java)
 
-            var selectedMethod = "(no change)"
-
-            // Save bridge in settings
-            settingsResponse.settings?.let {
-                if (it.size == circumventionApiIndex) {
-                    // Don't do anything for now
-                    // Prefs.putConnectionPathway(Prefs.PATHWAY_DIRECT)
-                    Log.d(TAG, "push notif: Direct is chosen")
-                    selectedMethod = "direct"
-
-                    return
-                }
-                val b = it[circumventionApiIndex].bridges
-                if (b.type == CircumventionApiManager.BRIDGE_TYPE_SNOWFLAKE) {
-                    Prefs.putConnectionPathway(Prefs.PATHWAY_SNOWFLAKE)
-                    Log.d(TAG, "push notif: Snowflake is chosen")
-                    selectedMethod = "snowflake"
-                } else if (b.type == CircumventionApiManager.BRIDGE_TYPE_OBFS4) {
-                    var bridgeStrings = ""
-                    b.bridge_strings!!.forEach { bridgeString ->
-                        bridgeStrings += "$bridgeString\n"
-                    }
-                    Prefs.setBridgesList(bridgeStrings)
-                    Prefs.putConnectionPathway(Prefs.PATHWAY_CUSTOM)
-
-                    Log.d(TAG, "push notif: Custom is chosen with bridges")
-                    Log.d(TAG, "push notif: bridgeStrings: $bridgeStrings")
-                    selectedMethod = "obfs4 with pushed bridges"
-                } else {
-                    // Don't do anything for now
-                    // Prefs.putConnectionPathway(Prefs.PATHWAY_DIRECT)
-
-                    Log.d(TAG, "push notif: falling back to direct")
-                    selectedMethod = "direct (fallback)"
-                }
-            }
-
             // (if available) use channel to notify the UI thread for connection, or display notification for user
             // TODO: can I use runBlocking instead of lifecycleScope.launch(Dispatchers.Main) here?
             runBlocking {
@@ -100,31 +60,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     val channel = waitingChannel
                     if (channel != null) {
                         Log.d(TAG, "channel send")
-                        channel.send(selectedMethod)
+                        channel.send(settingsResponse)
                     } else {
                         Log.d(TAG, "display notification")
                         showNotification(applicationContext, NOTIFICATION_CHANNEL_ID, getString(R.string.bridges_updated), getString(R.string.restart_orbot_to_use_this_bridge_))
                     }
                 }
             }
-
-
-//            if (/* Check if data needs to be processed by long running job */ true) {
-//                // For long-running tasks (10 seconds or more) use WorkManager.
-//                scheduleJob()
-//            } else {
-//                // Handle message within 10 seconds
-//                handleNow()
-//            }
         }
 
         // Check if message contains a notification payload.
         remoteMessage.notification?.let {
             Log.d(TAG, "Message Notification Body: ${it.body}")
         }
-
-        // Also if you intend on generating your own notifications as a result of a received FCM
-        // message, here is where that should be initiated. See sendNotification method below.
     }
 
     companion object {
@@ -135,20 +83,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         private val circumventionApiIndex = 0
 
 
-        var waitingChannel: Channel<String>? = null
+        var waitingChannel: Channel<SettingsResponse>? = null
 
         fun sendRegistrationToServer(
+            country: String,
             token: String,
             callbackIfSuccess: (() -> Unit)? = null,
             callbackIfFail: (() -> Unit)? = null
         ) {
             // this is the computer's address in Android Virtual Machine
-            val url = "http://10.0.2.2:8888/fcm/register"
+            val url = "http://138.197.154.104:8888/fcm/register"
             val client = OkHttpClient()
 
-            // or I could use kotlinx.serialization here
-            // TODO: use actual country here
-            val jsonString = """{ "token": "$token", "country": "cn" }"""
+            val jsonString = """{ "token": "$token", "country": "$country" }"""
 
             val requestBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), jsonString)
             val request = Request.Builder()

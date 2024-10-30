@@ -20,11 +20,12 @@ import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import org.torproject.android.circumvention.SettingsResponse
 import org.torproject.android.service.util.Prefs
 
 
 // TODO: make this bottom sheet a place for getting permissions and confirming subscriptions.
-class PushBridgeBottomSheet(private val callbacks: ConnectionHelperCallbacks): OrbotBottomSheetDialogFragment() {
+class PushNotificationManager(private val country: String, private val onReceiveSettings: (SettingsResponse?) -> Unit): OrbotBottomSheetDialogFragment() {
     companion object {
         const val TAG = "PushBridgeBottomSheet"
         private const val bridgeStatement = "obfs4"
@@ -53,7 +54,6 @@ class PushBridgeBottomSheet(private val callbacks: ConnectionHelperCallbacks): O
 
                 // Log and toast
                 Log.d(TAG, token)
-                etBridges.setText(token)
             })
         } else {
             // TODO: Inform user that that your app will not show notifications.
@@ -107,6 +107,61 @@ class PushBridgeBottomSheet(private val callbacks: ConnectionHelperCallbacks): O
         // TODO: what about older SDK? test this on an older Android Virtual Device
     }
 
+    private fun register() {
+        val mainHandler = Handler(Looper.getMainLooper())
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+
+                // TODO: display a toast for error?
+                return@OnCompleteListener
+            }
+
+            // Get new FCM registration token
+            val token = task.result
+
+            // Log and toast
+            Log.d(TAG, token)
+
+            // Send the token to web server
+            // TODO: check if has already been initialized?
+            MyFirebaseMessagingService.sendRegistrationToServer(country, token, {
+                mainHandler.post { // Update UI elements here
+                    etBridges.setText("Registered with server successfully. Awaiting bridges to be posted via push notification")
+
+                    // use channel to wait for push messages. before then, user cannot proceed
+                    MyFirebaseMessagingService.waitingChannel = Channel()
+                    Log.d(TAG, "channel set. waiting " + MyFirebaseMessagingService.waitingChannel)
+                    // TODO: why does runBlocking here result in Application Not Responding?
+                    // How does switching to this fix the issue?
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        launch {
+                            val channel = MyFirebaseMessagingService.waitingChannel
+
+                            if (channel == null) {
+                                // TODO: error. race condition? display error toast and go back?
+                                Log.w(TAG, "channel is null. race condition?")
+                                return@launch
+                            }
+
+                            Log.d(TAG, "channel wait to receive")
+                            // TODO: add a timeout and prompt user to change method?
+                            val selectedMethod = channel.receive()
+                            Log.d(TAG, "channel receive successful")
+                            onReceiveSettings(selectedMethod)
+                            channel.close()
+                            MyFirebaseMessagingService.waitingChannel = null
+                        }
+                    }
+
+                }
+            }, {
+                //TODO: show a popup or have a onError callback, similar to other askTor function
+                Log.d(TAG,"Error registering with push notification server")
+            })
+        })
+    }
+
     private lateinit var btnAction: Button
     private lateinit var etBridges: EditText
 
@@ -115,8 +170,7 @@ class PushBridgeBottomSheet(private val callbacks: ConnectionHelperCallbacks): O
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // to post a Runnable to the main thread's message queue, avoiding CalledFromWrongThreadException
-        val mainHandler = Handler(Looper.getMainLooper())
+        // to post a Runnable to the main thread's message queue, avoiding CalledFromWrongThreadExceptio
 
         val v =  inflater.inflate(R.layout.push_bridge_bottom_sheet, container, false)
         v.findViewById<View>(R.id.tvCancel).setOnClickListener { dismiss() }
@@ -126,87 +180,23 @@ class PushBridgeBottomSheet(private val callbacks: ConnectionHelperCallbacks): O
             askNotificationPermission()
         }
 
-        // TODO: only allow connect when push notification has been received (use a blocking Go-like channel?)
         btnAction = v.findViewById(R.id.btnAction)
         btnAction.setOnClickListener {
-            Prefs.setBridgesList(etBridges.text.toString())
-            callbacks.tryConnecting()
+            Log.d(TAG, "enabled push notifications")
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                // FCM SDK (and your app) can post notifications.
+                btnRequestPermission.isEnabled = false
+                btnRequestPermission.text = "Notifications Enabled ✔"
+                this.register()
+            }
             closeAllSheets()
         }
-        btnAction.isEnabled = false
 
         // TODO: maybe use the textfield for out-of-band initialization?
         etBridges = v.findViewById(R.id.etBridges)
         configureMultilineEditTextScrollEvent(etBridges)
-//        var bridges = Prefs.getBridgesList()
-//        if (!bridges.contains(bridgeStatement)) bridges = ""
-//        etBridges.setText(bridges)
-//        updateUi()
-
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            // FCM SDK (and your app) can post notifications.
-            btnRequestPermission.isEnabled = false
-            btnRequestPermission.text = "Notifications Enabled ✔"
-
-            FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
-                if (!task.isSuccessful) {
-                    Log.w(TAG, "Fetching FCM registration token failed", task.exception)
-
-                    // TODO: display a toast for error?
-                    return@OnCompleteListener
-                }
-
-                // Get new FCM registration token
-                val token = task.result
-
-                // Log and toast
-                Log.d(TAG, token)
-
-                // Send the token to web server
-                // TODO: check if has already been initialized?
-                MyFirebaseMessagingService.sendRegistrationToServer(token, {
-                    mainHandler.post { // Update UI elements here
-                        etBridges.setText("Registered with server successfully. Awaiting bridges to be posted via push notification")
-
-                        // use channel to wait for push messages. before then, user cannot proceed
-                        MyFirebaseMessagingService.waitingChannel = Channel()
-                        Log.d(TAG, "channel set. waiting " + MyFirebaseMessagingService.waitingChannel)
-                        // TODO: why does runBlocking here result in Application Not Responding?
-                        // How does switching to this fix the issue?
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            launch {
-                                val channel = MyFirebaseMessagingService.waitingChannel
-
-                                if (channel == null) {
-                                    // TODO: error. race condition? display error toast and go back?
-                                    Log.w(TAG, "channel is null. race condition?")
-                                    return@launch
-                                }
-
-                                Log.d(TAG, "channel wait to receive")
-                                // TODO: add a timeout and prompt user to change method?
-                                val selectedMethod = channel.receive()
-                                Log.d(TAG, "channel receive successful")
-                                channel.close()
-                                MyFirebaseMessagingService.waitingChannel = null
-
-                                // bridges will be set in MyFirebaseMessaingService
-                                etBridges.setText("Registered with server successfully. Bridges received via push notification. You're all set! Instructed Method: " + selectedMethod)
-                                btnAction.isEnabled = true
-                            }
-                        }
-
-                    }
-                }, {
-                    mainHandler.post { // Update UI elements here
-                        etBridges.setText("Cannot register with server. Please try registering out of band with the following token:\n$token")
-                    }
-                })
-            })
-        }
-
         Log.d(TAG, "initialized")
         return v
     }
