@@ -1,7 +1,10 @@
 package org.torproject.android
 
 import IPtProxy.IPtProxy
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -12,7 +15,14 @@ import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.RadioButton
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import org.torproject.android.circumvention.Bridges
 import org.torproject.android.circumvention.CircumventionApiManager
 import org.torproject.android.circumvention.SettingsRequest
@@ -39,6 +49,7 @@ class ConfigConnectionBottomSheet() :
     private lateinit var btnAskTor: Button
 
     companion object {
+        private const val TAG = "connection config bottom sheet"
         public fun newInstance(callbacks: ConnectionHelperCallbacks): ConfigConnectionBottomSheet {
             return ConfigConnectionBottomSheet().apply {
                 this.callbacks = callbacks
@@ -46,6 +57,16 @@ class ConfigConnectionBottomSheet() :
         }
     }
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            this.registerPushNotifications()
+        } else {
+            // TODO: Inform user that that your app will not show notifications, maybe with same callback used elsewhere
+            Log.d(TAG, "permission for push notifications was not granted")
+        }
+    }
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
@@ -248,25 +269,77 @@ class ConfigConnectionBottomSheet() :
         })
 
         // Set up push notifications for further updates
-        PushNotificationManager(countryCodeValue, {
-            it?.let {
-                circumventionApiBridges = it.settings
-                if (circumventionApiBridges == null) {
-                    Log.d("abc", "settings is null, we can assume a direct connect is fine ")
-                    rbDirect.isChecked = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                // TODO: display an educational UI explaining to the user the features that will be enabled
+                //       by them granting the POST_NOTIFICATION permission. This UI should provide the user
+                //       "OK" and "No thanks" buttons. If the user selects "OK," directly request the permission.
+                //       If the user selects "No thanks," allow the user to continue without notifications.
 
-                } else {
+                // For now, directly ask for the permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
 
-                    Log.d("abc", "settings is $circumventionApiBridges")
-                    circumventionApiBridges?.forEach { b ->
-                        Log.d("abc", "BRIDGE $b")
-                    }
-
-                    //got bridges, let's set them
-                    setPreferenceForSmartConnect()
-                }
+                // Directly ask for the permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        }).show(requireActivity().supportFragmentManager, PushNotificationManager.TAG)
+        }
+    }
+
+    private fun registerPushNotifications() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+                // TODO: display a toast for error?
+                return@OnCompleteListener
+            }
+            val token = task.result
+            // Log and toast
+            Log.d(TAG, token)
+            // Send the token to web server
+            // TODO: check if has already been initialized?
+            MyFirebaseMessagingService.sendRegistrationToServer(Prefs.getCountry(), token, {
+                Log.d(
+                    TAG,
+                    "Registered with server successfully. Awaiting bridges to be posted via push notification"
+                )
+
+                // use channel to wait for push messages. before then, user cannot proceed
+                MyFirebaseMessagingService.waitingChannel = Channel()
+                Log.d(
+                    TAG,
+                    "channel set. waiting " + MyFirebaseMessagingService.waitingChannel
+                )
+                // TODO: why does runBlocking here result in Application Not Responding?
+                // How does switching to this fix the issue?
+                lifecycleScope.launch(Dispatchers.Main) {
+                    launch {
+                        val channel = MyFirebaseMessagingService.waitingChannel
+
+                        if (channel == null) {
+                            // TODO: error. race condition? display error toast and go back?
+                            Log.w(TAG, "channel is null. race condition?")
+                            return@launch
+                        }
+
+                        Log.d(TAG, "channel wait to receive")
+                        val settings = channel.receive()
+                        Log.d(TAG, "channel receive successful")
+                        circumventionApiBridges = settings.settings
+                        if (circumventionApiBridges == null) {
+                            rbDirect.isChecked = true
+                        } else {
+                            setPreferenceForSmartConnect()
+                        }
+                        channel.close()
+                        MyFirebaseMessagingService.waitingChannel = null
+                    }
+                }
+            }, {
+                //TODO: show a popup or have a onError callback, similar to other askTor function
+                Log.d(TAG, "Error registering with push notification server")
+            })
+        })
     }
 
     private fun getDeviceCountryCode(context: Context): String {
