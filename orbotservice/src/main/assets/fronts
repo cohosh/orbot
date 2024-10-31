@@ -9,3 +9,4 @@ moat-url https://1723079976.rsc.cdn77.org
 moat-front www.phpmyadmin.net
 snowflake-relay-url wss://snowflake.bamsoftware.com
 snowflake-nat-probe https://snowflake-broker.torproject.net:8443/probe
+push-distributor-url https://push.netlives.info
