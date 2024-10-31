@@ -27,31 +27,19 @@ import java.io.IOException
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
-    /**
-     * Called if the FCM registration token is updated. This may occur if the security of
-     * the previous token had been compromised. Note that this is called when the
-     * FCM registration token is initially generated so this is where you would retrieve the token.
-     */
     override fun onNewToken(token: String) {
-        Log.d(TAG, "Refreshed token: $token")
-
-        // If you want to send messages to this application instance or
-        // manage this apps subscriptions on the server side, send the
-        // FCM registration token to your app server.
-        sendRegistrationToServer("", token)
+        Log.d(TAG, "Generated new FCM token: $token")
+        sendRegistrationToServer(Prefs.getCountry(), token)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
         Log.d(TAG, "From: ${remoteMessage.from}")
 
-        // Check if message contains a data payload.
         if (remoteMessage.data.isNotEmpty()) {
             Log.d(TAG, "Message data payload: ${remoteMessage.data}")
-
-            // parse remoteMessage.data
-            val gson = Gson()
-            val settingsResponse = gson.fromJson(remoteMessage.data.getOrDefault("payload", "{}"), SettingsResponse::class.java)
+            val settingsResponse = Gson().fromJson(
+                remoteMessage.data.getOrDefault("payload", "{}"), SettingsResponse::class.java)
 
             // (if available) use channel to notify the UI thread for connection, or display notification for user
             // TODO: can I use runBlocking instead of lifecycleScope.launch(Dispatchers.Main) here?
@@ -77,11 +65,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "push-notification"
-
         private const val NOTIFICATION_CHANNEL_ID = "orbot_channel_2"
-
-        private val circumventionApiIndex = 0
-
 
         var waitingChannel: Channel<SettingsResponse>? = null
 

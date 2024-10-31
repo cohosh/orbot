@@ -7,6 +7,7 @@ import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
+import org.jetbrains.annotations.NotNull;
 import org.torproject.android.service.OrbotConstants;
 
 import java.util.Locale;
@@ -44,7 +45,7 @@ public class Prefs {
     private static final String PREF_CONNECTION_PATHWAY = "pref_connection_pathway";
     public static final String PATHWAY_SMART = "smart", PATHWAY_DIRECT = "direct",
         PATHWAY_SNOWFLAKE = "snowflake", PATHWAY_SNOWFLAKE_AMP = "snowflake_amp", PATHWAY_CUSTOM = "custom";
-
+    public static final String PREF_COUNTRY = "";
     public static final String PREF_SECURE_WINDOW_FLAG = "pref_flag_secure";
 
     private static SharedPreferences prefs;
@@ -250,5 +251,13 @@ public class Prefs {
 
     public static boolean isSecureWindow () {
         return prefs.getBoolean(PREF_SECURE_WINDOW_FLAG, true);
+    }
+
+    public static void setCountry(@NotNull String countryCodeValue) {
+        putString(PREF_COUNTRY, countryCodeValue);
+    }
+
+    public static String getCountry() {
+        return prefs.getString(PREF_COUNTRY, "");
     }
 }

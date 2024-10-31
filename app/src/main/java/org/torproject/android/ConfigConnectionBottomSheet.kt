@@ -219,6 +219,7 @@ class ConfigConnectionBottomSheet() :
 
         val countryCodeValue: String = getDeviceCountryCode(requireContext())
         Log.d("bim", "The country code is $countryCodeValue")
+        Prefs.setCountry(countryCodeValue)
 
         CircumventionApiManager().getSettings(SettingsRequest(countryCodeValue), {
             it?.let {

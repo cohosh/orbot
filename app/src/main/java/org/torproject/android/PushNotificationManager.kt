@@ -24,20 +24,15 @@ import org.torproject.android.circumvention.SettingsResponse
 import org.torproject.android.service.util.Prefs
 
 
-// TODO: make this bottom sheet a place for getting permissions and confirming subscriptions.
 class PushNotificationManager(private val country: String, private val onReceiveSettings: (SettingsResponse?) -> Unit): OrbotBottomSheetDialogFragment() {
     companion object {
         const val TAG = "PushBridgeBottomSheet"
-        private const val bridgeStatement = "obfs4"
     }
 
-    // Declare the launcher at the top of your Activity/Fragment:
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // FCM SDK (and your app) can post notifications.
-
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                 if (!task.isSuccessful) {
                     Log.w(TAG, "Fetching FCM registration token failed", task.exception)
@@ -63,19 +58,12 @@ class PushNotificationManager(private val country: String, private val onReceive
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
-                // FCM SDK (and your app) can post notifications.
-
                 FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                     if (!task.isSuccessful) {
                         Log.w(TAG, "Fetching FCM registration token failed", task.exception)
                         return@OnCompleteListener
                     }
-
-                    // Get new FCM registration token
-                    val token = task.result
-
-                    // Log and toast
-                    Log.d(TAG, token)
+                    Log.d(TAG, task.result)
                 })
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
                 // TODO: display an educational UI explaining to the user the features that will be enabled
@@ -99,17 +87,12 @@ class PushNotificationManager(private val country: String, private val onReceive
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
                 Log.w(TAG, "Fetching FCM registration token failed", task.exception)
-
                 // TODO: display a toast for error?
                 return@OnCompleteListener
             }
-
-            // Get new FCM registration token
             val token = task.result
-
             // Log and toast
             Log.d(TAG, token)
-
             // Send the token to web server
             // TODO: check if has already been initialized?
             MyFirebaseMessagingService.sendRegistrationToServer(country, token, {
