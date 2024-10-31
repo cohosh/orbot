@@ -23,6 +23,7 @@ androidx-runner = "1.6.2"
 androidx-work = "2.10.1"
 apl-appintro = "v4.2.3"
 guardian-jtorctl = "0.4.5.7"
+google = "4.3.15"
 junit-jupiter = "5.12.2"
 navigation-fragment-ktx = "2.9.0"
 retrofit = "2.11.0"
@@ -80,3 +81,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+google-services = { id = "com.google.gms:google-services", version.ref = "google" }

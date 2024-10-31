@@ -132,6 +132,13 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name="CircumventionFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
 
         <activity-alias
             android:name=".main.NightWatch"

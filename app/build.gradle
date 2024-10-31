@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 apply from: "../commons.gradle"
+apply plugin: 'com.google.gms.google-services'
 
 // Gets the version name from the latest Git tag, stripping the leading v off
 def getVersionName = { ->
@@ -135,6 +136,10 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso)
     androidTestImplementation(libs.androidx.rules)
     androidTestImplementation(libs.androidx.runner)
+    // Import the BoM for the Firebase platform
+    implementation platform('com.google.firebase:firebase-bom:32.2.2')
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    // implementation 'com.google.firebase:firebase-messaging'
 }
 
 tasks.register("copyLicenseToAssets", Copy) {

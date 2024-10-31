@@ -45,3 +45,6 @@ app/src/main/assets/LICENSE
 
 # local kotlin config 
 .kotlin/
+
+# Firebase Android configuration file (for FCM)
+/app/google-services.json

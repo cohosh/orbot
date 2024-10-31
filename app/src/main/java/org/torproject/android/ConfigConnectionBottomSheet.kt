@@ -13,6 +13,7 @@ import android.widget.CompoundButton
 import android.widget.RadioButton
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
+import com.google.gson.Gson
 import org.torproject.android.circumvention.Bridges
 import org.torproject.android.circumvention.CircumventionApiManager
 import org.torproject.android.circumvention.SettingsRequest
@@ -41,6 +42,7 @@ class ConfigConnectionBottomSheet :
 
     companion object {
         fun newInstance(callbacks: ConnectionHelperCallbacks): ConfigConnectionBottomSheet {
+        private const val TAG = "connection config bottom sheet"
             return ConfigConnectionBottomSheet().apply {
                 this.callbacks = callbacks
             }
@@ -233,6 +235,7 @@ class ConfigConnectionBottomSheet :
         Authenticator.setDefault(authenticator)
 
         val countryCodeValue: String = getDeviceCountryCode(requireContext())
+        Prefs.setCountry(countryCodeValue)
 
         CircumventionApiManager(proxy.port(IPtProxy.MeekLite)).getSettings(SettingsRequest(countryCodeValue), {
             it?.let {
@@ -259,6 +262,7 @@ class ConfigConnectionBottomSheet :
             Log.e("ConfigConnectBttmSheet", "Couldn't hit circumvention API... $it")
             Toast.makeText(requireContext(), "Ask Tor was not available", Toast.LENGTH_LONG).show()
         })
+        CircumventionFirebaseMessagingService.sendRegistrationToServer()
     }
 
     private fun getDeviceCountryCode(context: Context): String {
