@@ -3,7 +3,6 @@ package org.torproject.android
 import IPtProxy.IPtProxy
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
@@ -17,12 +16,8 @@ import android.widget.RadioButton
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import org.torproject.android.circumvention.Bridges
 import org.torproject.android.circumvention.CircumventionApiManager
 import org.torproject.android.circumvention.SettingsRequest
@@ -57,13 +52,12 @@ class ConfigConnectionBottomSheet() :
         }
     }
 
-    private val requestPermissionLauncher = registerForActivityResult(
+    private val requestPushPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { isGranted: Boolean ->
         if (isGranted) {
             this.registerPushNotifications()
         } else {
-            // TODO: Inform user that that your app will not show notifications, maybe with same callback used elsewhere
             Log.d(TAG, "permission for push notifications was not granted")
         }
     }
@@ -277,11 +271,10 @@ class ConfigConnectionBottomSheet() :
                 //       If the user selects "No thanks," allow the user to continue without notifications.
 
                 // For now, directly ask for the permission
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                requestPushPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
-
                 // Directly ask for the permission
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                requestPushPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -290,54 +283,24 @@ class ConfigConnectionBottomSheet() :
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
                 Log.w(TAG, "Fetching FCM registration token failed", task.exception)
-                // TODO: display a toast for error?
                 return@OnCompleteListener
             }
-            val token = task.result
-            // Log and toast
-            Log.d(TAG, token)
-            // Send the token to web server
-            // TODO: check if has already been initialized?
-            MyFirebaseMessagingService.sendRegistrationToServer(Prefs.getCountry(), token, {
+            MyFirebaseMessagingService.sendRegistrationToServer(Prefs.getCountry(), task.result, {
                 Log.d(
                     TAG,
                     "Registered with server successfully. Awaiting bridges to be posted via push notification"
                 )
-
-                // use channel to wait for push messages. before then, user cannot proceed
-                MyFirebaseMessagingService.waitingChannel = Channel()
-                Log.d(
-                    TAG,
-                    "channel set. waiting " + MyFirebaseMessagingService.waitingChannel
-                )
-                // TODO: why does runBlocking here result in Application Not Responding?
-                // How does switching to this fix the issue?
-                lifecycleScope.launch(Dispatchers.Main) {
-                    launch {
-                        val channel = MyFirebaseMessagingService.waitingChannel
-
-                        if (channel == null) {
-                            // TODO: error. race condition? display error toast and go back?
-                            Log.w(TAG, "channel is null. race condition?")
-                            return@launch
-                        }
-
-                        Log.d(TAG, "channel wait to receive")
-                        val settings = channel.receive()
-                        Log.d(TAG, "channel receive successful")
+                MyFirebaseMessagingService.onMessageCallback = fun(settings){
                         circumventionApiBridges = settings.settings
                         if (circumventionApiBridges == null) {
                             rbDirect.isChecked = true
                         } else {
                             setPreferenceForSmartConnect()
                         }
-                        channel.close()
-                        MyFirebaseMessagingService.waitingChannel = null
                     }
-                }
             }, {
-                //TODO: show a popup or have a onError callback, similar to other askTor function
-                Log.d(TAG, "Error registering with push notification server")
+                Toast.makeText(requireContext(), "Push notification registration server was not available",
+                    Toast.LENGTH_LONG).show()
             })
         })
     }
