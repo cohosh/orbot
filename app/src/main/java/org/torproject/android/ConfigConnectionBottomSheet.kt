@@ -189,9 +189,6 @@ class ConfigConnectionBottomSheet() :
         if (pref.equals(Prefs.PATHWAY_DIRECT)) rbDirect.isChecked = true
     }
 
-    private var circumventionApiBridges: List<Bridges?>? = null
-    private var circumventionApiIndex = 0
-
     private fun askTor() {
 
         val dLeft = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_faq)
@@ -224,7 +221,7 @@ class ConfigConnectionBottomSheet() :
 
         CircumventionApiManager().getSettings(SettingsRequest(countryCodeValue), {
             it?.let {
-                circumventionApiBridges = it.settings
+                var circumventionApiBridges = it.settings
                 if (circumventionApiBridges == null) {
                     //Log.d("abc", "settings is null, we can assume a direct connect is fine ")
                     rbDirect.isChecked = true
@@ -237,7 +234,7 @@ class ConfigConnectionBottomSheet() :
                     }
 
                     //got bridges, let's set them
-                    setPreferenceForSmartConnect()
+                    setPreferenceForSmartConnect(circumventionApiBridges)
                 }
 
                 IPtProxy.stopLyrebird()
@@ -269,15 +266,13 @@ class ConfigConnectionBottomSheet() :
 
     }
 
-    private fun setPreferenceForSmartConnect() {
-
+    private fun setPreferenceForSmartConnect(circumventionApiBridges: List<Bridges?>?) {
         val dLeft = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_green_check)
         btnAskTor.setCompoundDrawablesWithIntrinsicBounds(dLeft, null, null, null)
-
+        var circumventionApiIndex = 0
+        Log.d(TAG, "(in setPrefs) CircumventionApiBridges="+circumventionApiBridges)
         circumventionApiBridges?.let {
             if (it.size == circumventionApiIndex) {
-                circumventionApiBridges = null
-                circumventionApiIndex = 0
                 rbDirect.isChecked = true
                 btnAskTor.text = getString(R.string.connection_direct)
 
