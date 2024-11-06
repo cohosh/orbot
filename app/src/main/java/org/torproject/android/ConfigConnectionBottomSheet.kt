@@ -17,6 +17,7 @@ import com.google.gson.Gson
 import org.torproject.android.circumvention.Bridges
 import org.torproject.android.circumvention.CircumventionApiManager
 import org.torproject.android.circumvention.SettingsRequest
+import org.torproject.android.circumvention.SettingsResponse
 import org.torproject.android.service.OrbotService
 import org.torproject.android.service.util.Prefs
 import java.io.File
@@ -164,6 +165,8 @@ class ConfigConnectionBottomSheet() :
             }
         }
 
+        getSuggestedSettingsFromPreference()
+
         return v
     }
 
@@ -187,6 +190,20 @@ class ConfigConnectionBottomSheet() :
         if (pref.equals(Prefs.PATHWAY_SNOWFLAKE)) rbSnowflake.isChecked = true
         // if (pref.equals(Prefs.PATHWAY_SNOWFLAKE_AMP)) rbSnowflakeAmp.isChecked = true
         if (pref.equals(Prefs.PATHWAY_DIRECT)) rbDirect.isChecked = true
+    }
+
+    private fun getSuggestedSettingsFromPreference(){
+        val pref = Prefs.getPrefSuggestedSettings()
+        if(pref != ""){
+            try {
+                val settingsResponse = Gson().fromJson(
+                    pref, SettingsResponse::class.java
+                )
+                this.setPreferenceForSmartConnect(settingsResponse.settings)
+            } catch (e: Exception) {
+                Log.d(TAG, "unable to parse suggested settings: $pref")
+            }
+        }
     }
 
     private fun askTor() {

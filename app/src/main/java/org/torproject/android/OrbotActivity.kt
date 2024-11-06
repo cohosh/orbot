@@ -10,8 +10,10 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
@@ -22,6 +24,7 @@ import org.torproject.android.core.LocaleHelper
 import org.torproject.android.core.putNotSystem
 import org.torproject.android.core.ui.BaseActivity
 import org.torproject.android.service.OrbotConstants
+import org.torproject.android.service.OrbotService
 import org.torproject.android.service.util.Prefs
 import org.torproject.android.ui.LogBottomSheet
 
@@ -94,6 +97,10 @@ class OrbotActivity : BaseActivity() {
             registerReceiver(
                 orbotServiceBroadcastReceiver,
                 IntentFilter(OrbotConstants.LOCAL_ACTION_SMART_CONNECT_EVENT)
+            )
+            registerReceiver(
+                orbotServiceBroadcastReceiver,
+                IntentFilter(OrbotConstants.APPLY_SETTINGS)
             )
         }
 
@@ -247,6 +254,16 @@ class OrbotActivity : BaseActivity() {
                     if (http > 0 && socks > 0) fragMore.setPorts(http, socks)
                 }
 
+                OrbotConstants.APPLY_SETTINGS -> {
+                    val settings = intent.getStringExtra("SETTINGS")
+                    Log.d("OrbotActivity", "Received settings action with $settings")
+                    settings?.let{
+                        Prefs.setPrefSuggestedSettings(settings)
+                    }
+                    if (fragConnect.isAdded && fragConnect.context != null) {
+                        fragConnect.openConfigureTorConnection()
+                    }
+                }
                 else -> {}
             }
         }

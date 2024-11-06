@@ -46,6 +46,7 @@ public class Prefs {
     public static final String PATHWAY_SMART = "smart", PATHWAY_DIRECT = "direct",
         PATHWAY_SNOWFLAKE = "snowflake", PATHWAY_SNOWFLAKE_AMP = "snowflake_amp", PATHWAY_CUSTOM = "custom";
     public static final String PREF_COUNTRY = "";
+    public static final String PREF_SUGGESTED_SETTINGS = "";
     public static final String PREF_SECURE_WINDOW_FLAG = "pref_flag_secure";
 
     private static SharedPreferences prefs;
@@ -259,5 +260,13 @@ public class Prefs {
 
     public static String getCountry() {
         return prefs.getString(PREF_COUNTRY, "");
+    }
+
+    public static void setPrefSuggestedSettings(@NotNull String settings) {
+        putString(PREF_SUGGESTED_SETTINGS, settings);
+    }
+
+    public static String getPrefSuggestedSettings() {
+        return prefs.getString(PREF_SUGGESTED_SETTINGS, "");
     }
 }

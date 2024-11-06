@@ -1,5 +1,6 @@
 package org.torproject.android
 
+import android.content.Intent
 import android.util.Log
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.messaging.FirebaseMessaging
@@ -27,16 +28,15 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         if (remoteMessage.data.isNotEmpty()) {
             Log.d(TAG, "Message data payload: ${remoteMessage.data}")
-            showNotification(applicationContext, NOTIFICATION_CHANNEL_ID,
-                remoteMessage.data.getOrDefault("payload", "{}")
-            )
+            val settings = remoteMessage.data.getOrDefault("payload", "{}")
+            val intent = Intent(OrbotConstants.PUSH_NOTIFICATION)
+                .putExtra("SETTINGS", settings)
+            applicationContext.sendBroadcast(intent)
         }
     }
 
     companion object {
         private const val TAG = "push-notification"
-        private const val NOTIFICATION_CHANNEL_ID = "orbot_channel_1"
-        private const val NOTIFICATION_ID = 11
 
         fun sendRegistrationToServer(
             callbackIfSuccess: (() -> Unit)? = null,

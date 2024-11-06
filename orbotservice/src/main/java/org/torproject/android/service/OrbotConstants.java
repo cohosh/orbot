@@ -134,6 +134,8 @@ public interface OrbotConstants {
     String SMART_STATUS_NO_DIRECT = "no_direct";
     String SMART_STATUS_CIRCUMVENTION_ATTEMPT_FAILED = "bad_attempt_suggestion";
 
+    String PUSH_NOTIFICATION = "push_notification";
+    String APPLY_SETTINGS = "apply_settings";
 
     /**
      * All tor-related services and daemons are stopped
