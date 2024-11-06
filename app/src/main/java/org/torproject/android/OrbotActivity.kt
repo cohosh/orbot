@@ -13,10 +13,12 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsetsController
+import android.util.Log
 import android.widget.*
 
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -32,6 +34,7 @@ import com.scottyab.rootbeer.RootBeer
 import org.torproject.android.core.sendIntentToService
 import org.torproject.android.core.ui.BaseActivity
 import org.torproject.android.service.OrbotConstants
+import org.torproject.android.service.OrbotService
 import org.torproject.android.service.util.Prefs
 import org.torproject.android.ui.LogBottomSheet
 
@@ -183,6 +186,10 @@ class OrbotActivity : BaseActivity() {
                 orbotServiceBroadcastReceiver,
                 IntentFilter(OrbotConstants.LOCAL_ACTION_SMART_CONNECT_EVENT)
             )
+            registerReceiver(
+                orbotServiceBroadcastReceiver,
+                IntentFilter(OrbotConstants.APPLY_SETTINGS)
+            )
         }
 
         requestNotificationPermission()
@@ -326,6 +333,16 @@ class OrbotActivity : BaseActivity() {
                     }
                 }
 
+                OrbotConstants.APPLY_SETTINGS -> {
+                    val settings = intent.getStringExtra("SETTINGS")
+                    Log.d("OrbotActivity", "Received settings action with $settings")
+                    settings?.let{
+                        Prefs.setPrefSuggestedSettings(settings)
+                    }
+                    if (fragConnect.isAdded && fragConnect.context != null) {
+                        fragConnect.openConfigureTorConnection()
+                    }
+                }
                 else -> {}
             }
         }

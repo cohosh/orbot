@@ -124,6 +124,8 @@ object OrbotConstants {
     const val LOCAL_EXTRA_SMART_STATUS = "status"
     const val SMART_STATUS_NO_DIRECT = "no_direct"
     const val SMART_STATUS_CIRCUMVENTION_ATTEMPT_FAILED = "bad_attempt_suggestion"
+    const val PUSH_NOTIFICATION = "push_notification"
+    const val APPLY_SETTINGS = "apply_settings"
 
 
     /**

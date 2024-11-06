@@ -333,7 +333,7 @@ class ConnectFragment : Fragment(), ConnectionHelperCallbacks,
     }
 
 
-    private fun openConfigureTorConnection() =
+    fun openConfigureTorConnection() =
         ConfigConnectionBottomSheet.newInstance(this)
             .show(
                 requireActivity().supportFragmentManager, OrbotActivity::class.java.simpleName

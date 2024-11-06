@@ -76,7 +76,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 public class OrbotService extends VpnService {
 
     public final static String BINARY_TOR_VERSION = TorService.VERSION_NAME;
-    static final int NOTIFY_ID = 1, ERROR_NOTIFY_ID = 3;
+    static final int NOTIFY_ID = 1, ERROR_NOTIFY_ID = 3, PUSH_NOTIFY_ID = 4;
     public final static String NOTIFICATION_CHANNEL_ID = "orbot_channel_1";
     public static int mPortSOCKS = -1, mPortHTTP = -1, mPortDns = -1, mPortTrans = -1;
     public static File appBinHome, appCacheHome;
@@ -175,6 +175,24 @@ public class OrbotService extends VpnService {
         else if (mCurrentStatus.equals(STATUS_ON))
             title = getString(R.string.status_activated);
         return title;
+    }
+
+    protected void showPushNotification(String settings) {
+        mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        var pendingIntent = PendingIntent.getBroadcast(this, 0,
+                new Intent(OrbotConstants.APPLY_SETTINGS).putExtra("SETTINGS", settings)
+                        .putExtra("NOTIFICATION_ID", PUSH_NOTIFY_ID),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        var builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_tor)
+                .setContentTitle(getString(R.string.push_notification_title))
+                .setContentText(getString(R.string.push_notification_text))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .addAction(
+                        R.drawable.ic_stat_tor,
+                        getString(R.string.push_notification_action), pendingIntent)
+                .setAutoCancel(true);
+        mNotificationManager.notify(PUSH_NOTIFY_ID,builder.build());
     }
 
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -395,6 +413,8 @@ public class OrbotService extends VpnService {
                 filter.addAction(ACTION_STATUS);
                 filter.addAction(ACTION_ERROR);
                 filter.addAction(LOCAL_ACTION_NOTIFICATION_START);
+                filter.addAction(PUSH_NOTIFICATION);
+                filter.addAction(APPLY_SETTINGS);
 
                 mActionBroadcastReceiver = new ActionBroadcastReceiver();
                 ContextCompat.registerReceiver(this, mActionBroadcastReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -1153,6 +1173,13 @@ public class OrbotService extends VpnService {
                     }
                     var localStatus = new Intent(LOCAL_ACTION_STATUS).putExtra(EXTRA_STATUS, mCurrentStatus);
                     LocalBroadcastManager.getInstance(OrbotService.this).sendBroadcast(localStatus); // update the activity with what's new
+                }
+                case PUSH_NOTIFICATION -> {
+                    showPushNotification(intent.getStringExtra("SETTINGS"));
+                }
+                case APPLY_SETTINGS -> {
+                    if (mNotificationManager != null) mNotificationManager.cancel(PUSH_NOTIFY_ID);
+                    LocalBroadcastManager.getInstance(OrbotService.this).sendBroadcast(intent);
                 }
             }
         }

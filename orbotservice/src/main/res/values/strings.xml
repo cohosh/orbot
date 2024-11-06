@@ -19,6 +19,10 @@
 
     <string name="updating_settings_in_tor_service">updating settings in Tor service</string>
 
+    <string name="push_notification_title">New connection settings available</string>
+    <string name="push_notification_text">Updated connection settings are available for your location</string>
+    <string name="push_notification_action">Apply</string>
+
     <string name="menu_new_identity">New Identity</string>
 
     <string name="kibibyte_per_second">KiB/s</string>
