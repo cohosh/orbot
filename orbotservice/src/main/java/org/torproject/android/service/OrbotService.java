@@ -326,6 +326,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
     }
 
     private static HashMap<String, String> mFronts;
+    private static HashMap<String, String> mPubKeys;
     private static List<String> mSnowflakeBridges;
 
     public static void loadSnowflakeBridges(Context context) {
@@ -361,8 +362,30 @@ public class OrbotService extends VpnService implements OrbotConstants {
         }
     }
 
+    public static void loadPublicKeys(Context context) {
+        if (mPubKeys == null) {
+            mPubKeys = new HashMap<>();
+            try {
+                var reader = new BufferedReader(new InputStreamReader(context.getAssets().open("keys")));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    int spaceIdx = line.indexOf(' ');
+                    String key = line.substring(0, spaceIdx);
+                    String val = line.substring(spaceIdx + 1);
+                    mPubKeys.put(key, val);
+                }
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static String getCdnFront(String service) {
         return mFronts.get(service);
+    }
+    public static String getPubKey(String service) {
+        return mPubKeys.get(service);
     }
 
 
@@ -601,6 +624,7 @@ public class OrbotService extends VpnService implements OrbotConstants {
                 mVpnManager = new OrbotVpnManager(this);
                 loadSnowflakeBridges(this);
                 loadCdnFronts(this);
+                loadPublicKeys(this);
             } catch (Exception e) {
                 Log.e(TAG, "Error setting up Orbot", e);
                 logNotice(getString(R.string.couldn_t_start_tor_process_) + " " + e.getClass().getSimpleName());
