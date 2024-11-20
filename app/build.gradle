@@ -140,6 +140,9 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.2.2')
     implementation 'com.google.firebase:firebase-messaging-ktx'
     // implementation 'com.google.firebase:firebase-messaging'
+
+    implementation 'com.google.crypto.tink:tink-android:1.15.0'
+
 }
 
 tasks.register("copyLicenseToAssets", Copy) {

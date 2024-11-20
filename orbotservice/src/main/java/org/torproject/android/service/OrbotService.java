@@ -279,14 +279,37 @@ public class OrbotService extends VpnService {
     }
 
     private static HashMap<String, String> mFronts;
+    private static HashMap<String, String> mPubKeys;
 
     public static void loadCdnFronts(Context context) {
         if (mFronts != null) return;
         mFronts = ContentDeliveryNetworkFronts.localFronts(context);
     }
 
+    public static void loadPublicKeys(Context context) {
+        if (mPubKeys == null) {
+            mPubKeys = new HashMap<>();
+            try {
+                var reader = new BufferedReader(new InputStreamReader(context.getAssets().open("keys")));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    int spaceIdx = line.indexOf(' ');
+                    String key = line.substring(0, spaceIdx);
+                    String val = line.substring(spaceIdx + 1);
+                    mPubKeys.put(key, val);
+                }
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static String getCdnFront(String service) {
         return mFronts.get(service);
+    }
+    public static String getPubKey(String service) {
+        return mPubKeys.get(service);
     }
 
     public synchronized void enableSnowflakeProxy() { // This is to host a snowflake entrance node / bridge
@@ -438,6 +461,7 @@ public class OrbotService extends VpnService {
 
                 mVpnManager = new OrbotVpnManager(this);
                 loadCdnFronts(this);
+                loadPublicKeys(this);
             } catch (Exception e) {
                 Log.e(TAG, "Error setting up Orbot", e);
                 logNotice(getString(R.string.couldn_t_start_tor_process_) + " " + e.getClass().getSimpleName());

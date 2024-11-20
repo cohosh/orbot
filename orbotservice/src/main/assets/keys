@@ -1,0 +1,1 @@
+push-notification-distributor {"primaryKeyId":3368364484,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.Ed25519PublicKey","value":"EiBEQfdacvXL0YmqGIGLUmkf1+5N1hnXuNt1z1qfDLJusg==","keyMaterialType":"ASYMMETRIC_PUBLIC"},"status":"ENABLED","keyId":3368364484,"outputPrefixType":"TINK"}]}
