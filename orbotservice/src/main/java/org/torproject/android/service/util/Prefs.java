@@ -55,6 +55,7 @@ public class Prefs {
     public static final String PREF_SUGGESTED_SETTINGS = "";
 
     public static final String PREF_PUSH_KEY = "";
+    public static final String PREF_PUSH_TS = "";
     public static final String PREF_SECURE_WINDOW_FLAG = "pref_flag_secure";
 
     private static SharedPreferences prefs;
@@ -292,5 +293,11 @@ public class Prefs {
     }
     public static String getPrefPushKey(){
         return prefs.getString(PREF_PUSH_KEY, "");
+    }
+    public static void setPrefPushTs(@NotNull String timestamp){
+        putString(PREF_PUSH_TS, timestamp);
+    }
+    public static String getPrefPushTs(){
+        return prefs.getString(PREF_PUSH_TS, "");
     }
 }

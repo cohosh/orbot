@@ -41,12 +41,12 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
         if (remoteMessage.data.isNotEmpty()) {
             Log.d(TAG, "Message data payload: ${remoteMessage.data}")
 
-            val msg = decrypt_message(remoteMessage.data.getOrDefault("payload", "{}"))
+            val msg = decryptMessage(remoteMessage.data.getOrDefault("payload", "{}"))
             if (msg.size == 0) {
                 return
             }
             val response = Gson().fromJson(String(msg, Charsets.UTF_8), PushSettingsResponse::class.java)
-            if (!verify_signature(response.signature, response.settings)) {
+            if (!verifySignature(response.signature, response.settings)) {
                 Log.d(TAG, "Failed to verify signature from distributor")
                 return
             }
@@ -70,13 +70,13 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
                     callbackIfFail?.invoke()
                     return@OnCompleteListener
                 }
-                rotate_key()
+                rotateKey()
                 Log.d(TAG, "Loaded keyset: "+ Prefs.getPrefPushKey())
                 val handle = TinkJsonProtoKeysetFormat.parseKeyset(Prefs.getPrefPushKey(), InsecureSecretKeyAccess.get())
                 val pubkey = TinkJsonProtoKeysetFormat.serializeKeyset(handle.publicKeysetHandle, InsecureSecretKeyAccess.get())
                 val country = Prefs.getCountry()
                 val url = OrbotService.getCdnFront("push-distributor-url") + "/fcm/register"
-                val jsonString = """{ "token": "${task.result}", "country": "$country", "key": ${pubkey} }"""
+                val jsonString = """{ "token": "${task.result}", "country": "cn", "key": ${pubkey} }"""
                 Log.d(TAG, "Sent string: "+jsonString)
                 val requestBody = RequestBody.create(
                     MediaType.parse("application/json; charset=utf-8"),
@@ -101,7 +101,7 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
             })
         }
 
-        fun rotate_key() {
+        private fun rotateKey() {
             HybridConfig.register()
             val handle: KeysetHandle = KeysetHandle.generateNew(PredefinedHybridParameters.ECIES_P256_HKDF_HMAC_SHA256_AES128_GCM)
             val serializedKeyset =
@@ -110,7 +110,7 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
             Log.d(TAG, "Generated new keyset: "+ serializedKeyset)
         }
 
-        fun decrypt_message(payload: String): ByteArray {
+        private fun decryptMessage(payload: String): ByteArray {
             val encryptedSettings = Base64.getDecoder().decode(payload)
             val handle = TinkJsonProtoKeysetFormat.parseKeyset(Prefs.getPrefPushKey(), InsecureSecretKeyAccess.get())
             val decryptor: HybridDecrypt = handle.getPrimitive(HybridDecrypt::class.java)
@@ -124,7 +124,7 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
             return msg
         }
 
-        fun verify_signature(sig: String, msg: String): Boolean {
+        private fun verifySignature(sig: String, msg: String): Boolean {
             val signature = Base64.getDecoder().decode(sig)
             SignatureConfig.register();
             val sigHandle =
