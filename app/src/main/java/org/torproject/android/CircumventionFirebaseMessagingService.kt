@@ -1,16 +1,17 @@
 package org.torproject.android
 
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.crypto.tink.HybridDecrypt
 import com.google.crypto.tink.InsecureSecretKeyAccess
-import com.google.crypto.tink.KeysetHandle
 import com.google.crypto.tink.PublicKeyVerify
 import com.google.crypto.tink.TinkJsonProtoKeysetFormat
 import com.google.crypto.tink.hybrid.HybridConfig
-import com.google.crypto.tink.hybrid.PredefinedHybridParameters
+import com.google.crypto.tink.hybrid.HybridKeyTemplates
 import com.google.crypto.tink.signature.SignatureConfig
+import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -32,9 +33,15 @@ import java.util.Base64
 
 class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
 
+    override fun onCreate(){
+        super.onCreate()
+
+        Log.d(TAG, "onCreate")
+    }
+
     override fun onNewToken(token: String) {
         Log.d(TAG, "Generated new FCM token: $token")
-        sendRegistrationToServer()
+        sendRegistrationToServer(applicationContext)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -59,20 +66,26 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "push-notification"
+        private lateinit var manager: AndroidKeysetManager
 
-        fun sendRegistrationToServer(
+        fun sendRegistrationToServer(context: Context,
             callbackIfSuccess: (() -> Unit)? = null,
             callbackIfFail: (() -> Unit)? = null
         ) {
+            if (!this::manager.isInitialized) {
+                HybridConfig.register()
+                manager = AndroidKeysetManager.Builder()
+                    .withSharedPref(context, "push_notifications", null)
+                    .withKeyTemplate(HybridKeyTemplates.ECIES_P256_HKDF_HMAC_SHA256_AES128_GCM)
+                    .build()
+            }
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                 if (!task.isSuccessful) {
                     Log.w(TAG, "Fetching FCM registration token failed", task.exception)
                     callbackIfFail?.invoke()
                     return@OnCompleteListener
                 }
-                rotateKey()
-                Log.d(TAG, "Loaded keyset: "+ Prefs.getPrefPushKey())
-                val handle = TinkJsonProtoKeysetFormat.parseKeyset(Prefs.getPrefPushKey(), InsecureSecretKeyAccess.get())
+                val handle = manager.getKeysetHandle()
                 val pubkey = TinkJsonProtoKeysetFormat.serializeKeyset(handle.publicKeysetHandle, InsecureSecretKeyAccess.get())
                 val country = Prefs.getCountry()
                 val url = OrbotService.getCdnFront("push-distributor-url") + "/fcm/register"
@@ -101,18 +114,9 @@ class CircumventionFirebaseMessagingService : FirebaseMessagingService() {
             })
         }
 
-        private fun rotateKey() {
-            HybridConfig.register()
-            val handle: KeysetHandle = KeysetHandle.generateNew(PredefinedHybridParameters.ECIES_P256_HKDF_HMAC_SHA256_AES128_GCM)
-            val serializedKeyset =
-                TinkJsonProtoKeysetFormat.serializeKeyset(handle, InsecureSecretKeyAccess.get())
-            Prefs.setPrefPushKey(serializedKeyset)
-            Log.d(TAG, "Generated new keyset: "+ serializedKeyset)
-        }
-
         private fun decryptMessage(payload: String): ByteArray {
             val encryptedSettings = Base64.getDecoder().decode(payload)
-            val handle = TinkJsonProtoKeysetFormat.parseKeyset(Prefs.getPrefPushKey(), InsecureSecretKeyAccess.get())
+            val handle = manager.getKeysetHandle()
             val decryptor: HybridDecrypt = handle.getPrimitive(HybridDecrypt::class.java)
             var msg = ByteArray(0)
             try {

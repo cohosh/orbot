@@ -276,7 +276,7 @@ class ConfigConnectionBottomSheet :
             Log.e("ConfigConnectBttmSheet", "Couldn't hit circumvention API... $it")
             Toast.makeText(requireContext(), "Ask Tor was not available", Toast.LENGTH_LONG).show()
         })
-        CircumventionFirebaseMessagingService.sendRegistrationToServer()
+        CircumventionFirebaseMessagingService.sendRegistrationToServer(requireContext())
     }
 
     private fun getDeviceCountryCode(context: Context): String {
